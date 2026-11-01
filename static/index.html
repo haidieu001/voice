@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="ElevenLabs Voice Pro — Chuyển văn bản thành giọng nói chuyên nghiệp với xử lý hàng loạt, tìm kiếm giọng nói và hỗ trợ proxy">
+    <title>ElevenLabs Voice Pro</title>
+    <link rel="stylesheet" href="/css/index.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🎙️</text></svg>">
+</head>
+<body>
+    <div class="app-layout">
+
+        <!-- ═══ HEADER ═══ -->
+        <header class="app-header">
+            <div class="app-logo">
+                <div class="logo-icon">🎙️</div>
+                <span class="logo-text">ElevenLabs Voice Pro</span>
+            </div>
+            <div class="header-right">
+                <div class="status-indicator" id="apiKeyStatus" data-tooltip="API Key">
+                    <span class="status-dot red" id="apiKeyDot"></span>
+                    <span id="apiKeyLabel">API Key: Chưa đặt</span>
+                </div>
+
+                <!-- ── CAPTCHA TOKEN STATUS (VOICE1 style) ── -->
+                <div class="status-indicator" id="captchaHeaderStatus" style="cursor:pointer;" data-tooltip="Mở CAPTCHA để tự xác minh">
+                    <span class="status-dot red" id="captchaDot"></span>
+                    <button id="btnCaptchaToggle" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-primary);padding:2px 10px;font-size:0.75rem;cursor:pointer;display:flex;align-items:center;gap:4px;">
+                        👤 <span id="captchaToggleLabel">Mở CAPTCHA</span>
+                    </button>
+                    <button id="btnHeadlessToggle" disabled style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);padding:2px 8px;font-size:0.75rem;cursor:default;" title="CAPTCHA luôn hiển thị để người dùng tự hoàn thành">
+                        👁 <span id="headlessLabel">Thủ công</span>
+                    </button>
+                    <button id="btnSessionClear" style="background:none;border:1px solid var(--border);border-radius:6px;color:var(--text-secondary);padding:2px 8px;font-size:0.75rem;cursor:pointer;" title="Trang thai session ElevenLabs (Nhan de xoa dang nhap)">
+                        🔐 <span id="sessionStatusLabel">Session</span>
+                    </button>
+                </div>
+                <span id="loginBtnIcon" style="display:none"></span>
+                <span id="loginBtnLabel" style="display:none"></span>
+                <span id="loginBtnBadge" style="display:none"></span>
+                <button id="btnOpenLoginModal" style="display:none"></button>
+                <div class="status-indicator" id="minimaxScraperHeaderStatus" style="cursor: pointer;" data-tooltip="Nhấn để bật/tắt Minimax Web Auth">
+                    <span class="status-dot red" id="minimaxDot"></span>
+                    <button id="btnMinimaxToggle" style="background: none; border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); padding: 2px 10px; font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+                        🔑 <span id="minimaxToggleLabel">Bắt đầu Minimax</span>
+                    </button>
+                </div>
+                <div class="status-indicator" id="proxyStatus" data-tooltip="Trạng thái Proxy">
+                    <span class="status-dot red" id="proxyDot"></span>
+                    <span id="proxyLabel">Proxy: Tắt</span>
+                </div>
+                <div class="status-indicator" data-tooltip="FFmpeg">
+                    <span class="status-dot" id="ffmpegDot"></span>
+                    <span id="ffmpegLabel">FFmpeg</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- ═══ SIDEBAR ═══ -->
+        <nav class="app-sidebar" id="sidebar">
+            <div class="nav-section">Chính</div>
+            <div class="nav-item active" data-tab="tab-voice-search" id="nav-voice-search">
+                <span class="nav-icon">🔍</span>
+                <span>Tìm Giọng Nói</span>
+            </div>
+            <div class="nav-item" data-tab="tab-tts" id="nav-tts">
+                <span class="nav-icon">🎤</span>
+                <span>Chuyển Văn Bản</span>
+            </div>
+            <div class="nav-item" data-tab="tab-batch" id="nav-batch">
+                <span class="nav-icon">📦</span>
+                <span>Xử Lý Hàng Loạt</span>
+            </div>
+
+            <div class="nav-section">Quản Lý</div>
+            <div class="nav-item" data-tab="tab-profiles" id="nav-profiles">
+                <span class="nav-icon">👤</span>
+                <span>Hồ Sơ Giọng</span>
+            </div>
+            <div class="nav-item" data-tab="tab-settings" id="nav-settings">
+                <span class="nav-icon">⚙️</span>
+                <span>Cài Đặt</span>
+            </div>
+            <div class="nav-item" data-tab="tab-log" id="nav-log">
+                <span class="nav-icon">📋</span>
+                <span>Nhật Ký</span>
+            </div>
+        </nav>
+
+        <!-- ═══ MAIN CONTENT ═══ -->
+        <main class="app-main" id="mainContent">
+
+            <!-- ── TAB: Tìm Giọng Nói ── -->
+            <div class="tab-panel active" id="tab-voice-search">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">🔍 Thư Viện Giọng Nói</div>
+                            <div class="card-subtitle">Tìm kiếm và duyệt các giọng nói ElevenLabs</div>
+                        </div>
+                    </div>
+                    <div class="grid-2" style="grid-template-columns: 1fr auto; gap: 12px; margin-bottom: 16px;">
+                        <div class="search-box">
+                            <span class="search-icon">🔎</span>
+                            <input type="text" class="input" id="voiceSearchInput" placeholder="Tìm giọng nói theo tên, ngôn ngữ, giọng vùng miền...">
+                        </div>
+                        <div class="btn-group">
+                            <select class="select" id="voiceProviderFilter" style="width: 140px;">
+                                <option value="elevenlabs">ElevenLabs</option>
+                                <option value="minimax">Minimax</option>
+                            </select>
+                            <select class="select" id="voiceLanguageFilter" style="width: 140px;">
+                                <option value="">Tất cả ngôn ngữ</option>
+                                <option value="vi">Tiếng Việt</option>
+                                <option value="en">Tiếng Anh</option>
+                                <option value="ja">Tiếng Nhật</option>
+                                <option value="ko">Tiếng Hàn</option>
+                                <option value="zh">Tiếng Trung</option>
+                                <option value="fr">Tiếng Pháp</option>
+                                <option value="de">Tiếng Đức</option>
+                                <option value="es">Tiếng Tây Ban Nha</option>
+                            </select>
+                            <select class="select" id="voiceGenderFilter" style="width: 120px;">
+                                <option value="">Tất cả giới</option>
+                                <option value="male">Nam</option>
+                                <option value="female">Nữ</option>
+                            </select>
+                            <button class="btn btn-primary" id="btnSearchVoices">Tìm kiếm</button>
+                            <button class="btn btn-sm" id="btnLoadMyClones" style="display:none;gap:6px;align-items:center;">
+                                🎤 Voice Clone của tôi
+                            </button>
+                            <button class="btn btn-sm" id="btnOpenCloneModal"
+                                style="gap:6px;align-items:center;background:linear-gradient(135deg,rgba(139,92,246,0.3),rgba(99,102,241,0.3));border:1px solid rgba(139,92,246,0.4);color:#c4b5fd;"
+                                title="Tạo voice clone mới từ file audio mẫu">
+                                🎙 Tạo Clone Mới
+                            </button>
+                        </div>
+                    </div>
+                    <!-- Voice Clone section (injected by JS when API key present) -->
+                    <div id="myClonesSection" style="margin-bottom:0;"></div>
+                    <div id="voiceLibStatus" style="font-size:12px;opacity:.75;margin-bottom:8px;"></div>
+                    <div class="voice-list" id="voiceResults">
+                        <div class="empty-state">
+                            <div class="empty-icon">🎵</div>
+                            <div class="empty-text">Tìm kiếm giọng nói để bắt đầu</div>
+                            <div class="empty-hint">Thử tìm "Vietnamese" hoặc nhấn Tìm kiếm để duyệt tất cả</div>
+                        </div>
+                    </div>
+                    <div style="text-align: center; margin-top: 12px;">
+                        <button class="btn btn-sm" id="btnLoadMoreVoices" style="display:none;">Tải thêm</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── TAB: Chuyển Văn Bản ── -->
+            <div class="tab-panel" id="tab-tts">
+                <!-- Voice Selector - inline -->
+                <div class="card" style="margin-bottom: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 120px;">
+                            <label class="label" style="margin-bottom: 4px;">Nhà cung cấp</label>
+                            <select class="select" id="ttsProviderSelect" style="width: 100%;">
+                                <option value="elevenlabs">ElevenLabs</option>
+                                <option value="minimax">Minimax (Hailuo)</option>
+                            </select>
+                        </div>
+                        <div style="flex: 2; min-width: 200px;">
+                            <label class="label" style="margin-bottom: 4px;">Giọng nói</label>
+                            <select class="select" id="ttsVoiceSelect" style="width: 100%;">
+                                <option value="">-- Chọn giọng nói --</option>
+                            </select>
+                        </div>
+                        <div id="selectedVoiceInfo" style="flex: 1; min-width: 150px; display: flex; align-items: center; gap: 8px;">
+                            <div class="voice-avatar" id="selectedVoiceAvatar" style="width: 36px; height: 36px; border-radius: 50%; background: var(--accent-gradient); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0;">🎤</div>
+                            <div>
+                                <div class="voice-name" id="selectedVoiceName" style="font-weight: 600; font-size: 0.85rem;">Chưa chọn</div>
+                                <div class="voice-meta" id="selectedVoiceMeta" style="font-size: 0.75rem; color: var(--text-muted);">Chọn giọng nói từ danh sách</div>
+                            </div>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 0.8rem; color: var(--text-secondary);">
+                                <input type="checkbox" id="chkAutoDownload" style="accent-color: var(--accent);"> Tự động tải về
+                            </label>
+                            <button class="btn btn-sm" id="btnChooseOutputDir" title="Chọn thư mục lưu">📁 Thư mục</button>
+                        </div>
+                    </div>
+                    <div id="outputDirDisplay" style="font-size: 0.72rem; color: var(--text-muted); margin-top: 6px; display: none;">
+                        📂 Lưu vào: <span id="outputDirPath">./output</span>
+                    </div>
+                </div>
+
+                <div class="split-layout">
+                    <!-- Left: Text Input -->
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="card-title">📝 Nhập Văn Bản</div>
+                            <div class="btn-group" style="gap: 4px;">
+                                <label class="btn btn-sm" style="cursor: pointer; margin: 0;">
+                                    📂 Nhập tệp
+                                    <input type="file" id="ttsFileInput" multiple accept=".txt,.srt,.md,.text" style="display: none;">
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <textarea class="textarea" id="ttsTextInput" rows="12"
+                                placeholder="Nhập văn bản cần chuyển thành giọng nói tại đây...
+
+Bạn có thể nhập hoặc dán văn bản tiếng Việt, tiếng Anh hoặc bất kỳ ngôn ngữ nào được hỗ trợ.
+Hỗ trợ văn bản dài — tự động chia chunk và ghép audio."></textarea>
+                            <div class="char-counter" id="ttsCharCount">0 / 5.000 ký tự</div>
+                        </div>
+                        <!-- Chunk progress (hidden by default) -->
+                        <div id="ttsChunkProgress" style="display: none; margin-bottom: 10px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 4px;">
+                                <span id="ttsChunkLabel">Đang xử lý chunk...</span>
+                                <span id="ttsChunkPct">0%</span>
+                            </div>
+                            <div style="height: 6px; background: var(--surface-2); border-radius: 3px; overflow: hidden;">
+                                <div id="ttsChunkBar" style="height: 100%; width: 0%; background: var(--accent-gradient); border-radius: 3px; transition: width 0.3s;"></div>
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="btnGenerate" style="flex:1;">
+                                ▶ Tạo Giọng Nói
+                            </button>
+                            <button class="btn btn-danger" id="btnStopTTS" style="display:none;">
+                                ⏹ Dừng
+                            </button>
+                            <button class="btn" id="btnClearText">🗑️ Xóa</button>
+                        </div>
+                    </div>
+
+                    <!-- Right: Voice Settings + Output -->
+                    <div>
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">🎛️ Cài Đặt Giọng</div>
+                                <button class="btn btn-sm" id="btnResetSettings">Đặt lại</button>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="label">Mô hình</label>
+                                <select class="select" id="ttsModel">
+                                    <option value="eleven_v3">Eleven v3 (Mới nhất)</option>
+                                    <option value="eleven_v2">Eleven v2</option>
+                                    <option value="eleven_multilingual_v2">Đa ngôn ngữ v2</option>
+                                    <option value="eleven_turbo_v2_5">Turbo v2.5</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="label">Ngôn ngữ</label>
+                                <select class="select" id="ttsLanguage">
+                                    <option value="vi">Tiếng Việt</option>
+                                    <option value="en">Tiếng Anh</option>
+                                    <option value="ja">Tiếng Nhật</option>
+                                    <option value="ko">Tiếng Hàn</option>
+                                    <option value="zh">Tiếng Trung</option>
+                                    <option value="fr">Tiếng Pháp</option>
+                                    <option value="de">Tiếng Đức</option>
+                                    <option value="es">Tiếng Tây Ban Nha</option>
+                                </select>
+                            </div>
+
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span class="slider-label">Độ ổn định</span>
+                                    <span class="slider-value" id="valStability">0.75</span>
+                                </div>
+                                <input type="range" id="sliderStability" min="0" max="1" step="0.01" value="0.75">
+                            </div>
+
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span class="slider-label">Độ tương đồng</span>
+                                    <span class="slider-value" id="valSimilarity">0.80</span>
+                                </div>
+                                <input type="range" id="sliderSimilarity" min="0" max="1" step="0.01" value="0.80">
+                            </div>
+
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span class="slider-label">Tốc độ</span>
+                                    <span class="slider-value" id="valSpeed">1.00</span>
+                                </div>
+                                <input type="range" id="sliderSpeed" min="0.25" max="4.0" step="0.05" value="1.00">
+                            </div>
+
+                            <div class="slider-group">
+                                <div class="slider-header">
+                                    <span class="slider-label">Phong cách</span>
+                                    <span class="slider-value" id="valStyle">0.30</span>
+                                </div>
+                                <input type="range" id="sliderStyle" min="0" max="1" step="0.01" value="0.30">
+                            </div>
+                        </div>
+
+                        <!-- Audio Output -->
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="card-title">🔊 Âm Thanh Đầu Ra</div>
+                                <button class="btn btn-sm" id="btnDownloadAudio" disabled>💾 Tải về</button>
+                            </div>
+                            <div class="audio-player" id="audioPlayer">
+                                <button class="play-btn" id="btnPlay" disabled>▶</button>
+                                <div class="audio-track">
+                                    <div class="audio-waveform" id="audioWaveform">
+                                        <div class="waveform-progress" id="waveformProgress"></div>
+                                    </div>
+                                    <div class="audio-time">
+                                        <span id="audioCurrent">0:00</span> / <span id="audioDuration">0:00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <audio id="audioElement" style="display:none;"></audio>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── TAB: Xử Lý Hàng Loạt ── -->
+            <div class="tab-panel" id="tab-batch">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">📦 Xử Lý Hàng Loạt</div>
+                            <div class="card-subtitle">Chuyển đổi nhiều file văn bản cùng lúc</div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-success" id="btnBatchStart">▶ Bắt đầu</button>
+                            <button class="btn btn-danger" id="btnBatchStop" disabled>⏹ Dừng</button>
+                        </div>
+                    </div>
+
+                    <!-- Drop zone -->
+                    <div class="drop-zone" id="batchDropZone">
+                        <div class="drop-icon">📁</div>
+                        <div class="drop-text">Kéo & thả file văn bản vào đây</div>
+                        <div class="drop-hint">Hỗ trợ file .txt, .srt, .md — hoặc nhấn để chọn file</div>
+                        <input type="file" id="batchFileInput" multiple accept=".txt,.srt,.md,.text" style="display:none;">
+                    </div>
+
+                    <div class="grid-4" style="margin-top: 16px;">
+                        <div class="form-group">
+                            <label class="label">Nhà cung cấp</label>
+                            <select class="select" id="batchProviderSelect">
+                                <option value="elevenlabs">ElevenLabs</option>
+                                <option value="minimax">Minimax (Hailuo)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="label">Chế độ chia văn bản</label>
+                            <select class="select" id="batchSplitMode">
+                                <option value="paragraph">Theo đoạn văn</option>
+                                <option value="sentence">Theo câu</option>
+                                <option value="fixed">Theo số ký tự</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="label">Định dạng xuất</label>
+                            <select class="select" id="batchOutputFormat">
+                                <option value="mp3">MP3</option>
+                                <option value="wav">WAV</option>
+                                <option value="ogg">OGG</option>
+                                <option value="flac">FLAC</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label class="label">Số ký tự tối đa/yêu cầu</label>
+                            <input type="number" class="input" id="batchMaxChars" value="5000" min="100" max="10000">
+                        </div>
+                    </div>
+
+                    <!-- Batch progress -->
+                    <div id="batchProgressSection" style="display:none; margin-top: 16px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span class="label" style="margin-bottom:0;">Tiến trình tổng thể</span>
+                            <span class="badge badge-info" id="batchProgressLabel">0%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="batchProgressBar" style="width:0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File list table -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📄 Danh Sách File</div>
+                        <span class="badge badge-info" id="batchFileCount">0 file</span>
+                    </div>
+                    <div class="table-container">
+                        <table id="batchFileTable">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Tên file</th>
+                                    <th>Ký tự</th>
+                                    <th>Tiến trình</th>
+                                    <th>Trạng thái</th>
+                                    <th>Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batchFileBody">
+                                <tr>
+                                    <td colspan="6" style="text-align:center; padding: 30px; color: var(--text-muted);">
+                                        Chưa có file nào được thêm
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── TAB: Hồ Sơ Giọng ── -->
+            <div class="tab-panel" id="tab-profiles">
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">👤 Hồ Sơ Giọng Nói</div>
+                            <div class="card-subtitle">Lưu và quản lý các cấu hình giọng nói của bạn</div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" id="btnSaveProfile">+ Lưu hiện tại</button>
+                            <button class="btn" id="btnImportProfiles">📥 Nhập</button>
+                            <button class="btn" id="btnExportProfiles">📤 Xuất</button>
+                        </div>
+                    </div>
+                    <div id="profilesList" class="voice-list">
+                        <div class="empty-state">
+                            <div class="empty-icon">👤</div>
+                            <div class="empty-text">Chưa có hồ sơ nào</div>
+                            <div class="empty-hint">Cấu hình cài đặt giọng nói và nhấn "Lưu hiện tại" để tạo hồ sơ</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── TAB: Cài Đặt ── -->
+            <div class="tab-panel" id="tab-settings">
+                <!-- API Key Settings (PRIMARY) -->
+                <div class="card" style="border: 1px solid var(--accent); box-shadow: 0 0 20px rgba(0, 167, 255, 0.1);">
+                    <div class="settings-section">
+                        <div class="settings-title">🔑 API Key ElevenLabs <span class="badge badge-success" style="font-size:0.7rem; vertical-align: middle;">Khuyên dùng</span></div>
+                        <div class="grid-2">
+                            <div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
+                                    Cách dễ nhất để tạo giọng nói. Đăng ký miễn phí tại
+                                    <a href="https://elevenlabs.io" target="_blank" style="color: var(--accent);">elevenlabs.io</a>
+                                    → lấy API key từ Profile → API Key.
+                                </p>
+                                <div class="form-group">
+                                    <label class="label">API Key</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="password" class="input" id="apiKeyInput" placeholder="Dán API key vào đây (bắt đầu bằng sk_...)" style="flex:1;">
+                                        <button class="btn btn-primary" id="btnSetApiKey">Lưu Key</button>
+                                        <button class="btn btn-danger" id="btnClearApiKey">Xóa Key</button>
+                                        <button class="btn btn-sm" id="btnToggleApiKey" title="Hiện/ẩn">👁️</button>
+                                    </div>
+                                </div>
+                                <div id="apiKeyStatusDetail" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 8px;">
+                                    Chưa đặt API key
+                                </div>
+                            </div>
+                            <div class="glass-card">
+                                <div style="font-weight: 600; margin-bottom: 12px;">📖 Hướng dẫn nhanh</div>
+                                <ol style="font-size: 0.82rem; color: var(--text-secondary); padding-left: 18px; line-height: 1.8;">
+                                    <li>Vào <a href="https://elevenlabs.io" target="_blank" style="color: var(--accent);">elevenlabs.io</a> → Đăng ký miễn phí</li>
+                                    <li>Nhấn avatar góc trái dưới → <strong>Profile + API key</strong></li>
+                                    <li>Sao chép API key (bắt đầu bằng <code style="color: var(--accent);">sk_...</code>)</li>
+                                    <li>Dán vào ô bên trái → nhấn <strong>Lưu Key</strong></li>
+                                    <li>Chọn giọng → nhập text → <strong>Tạo Giọng Nói</strong>!</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Captcha Settings (ALTERNATIVE) -->
+                <div class="card">
+                    <div class="settings-section">
+                        <div class="settings-title">🔐 CAPTCHA thủ công <span style="font-size:0.75rem; color:var(--text-muted);">(người dùng tự xác minh)</span></div>
+                        <div class="grid-2">
+                            <div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
+                                    Nhấn “Mở CAPTCHA” để hiện cửa sổ Camoufox.<br>
+                                    Bạn tự hoàn thành thử thách; ứng dụng chỉ nhận trạng thái xác minh thành công.
+                                </p>
+                                <div class="btn-group">
+                                    <button class="btn btn-success" id="btnStartCaptcha">👤 Mở CAPTCHA</button>
+                                    <button class="btn btn-danger" id="btnStopCaptcha">⏹ Dừng</button>
+                                    <button class="btn" id="btnRefreshCaptcha">🔄 Yêu cầu lại</button>
+                                </div>
+                            </div>
+                            <div class="glass-card">
+                                <div style="margin-bottom: 8px; font-weight: 600;">Trạng thái Token</div>
+                                <div id="captchaDetailStatus" style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    Chưa khởi động
+                                </div>
+                                <div style="margin-top: 12px;">
+                                    <label class="label">Token đã có sẵn (tùy chọn nâng cao)</label>
+                                    <div style="display: flex; gap: 8px;">
+                                        <input type="text" class="input" id="manualTokenInput" placeholder="Dán hCaptcha token vào đây...">
+                                        <button class="btn btn-sm" id="btnSetManualToken">Đặt</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Minimax Settings (ALTERNATIVE) -->
+                <div class="card">
+                    <div class="settings-section">
+                        <div class="settings-title">🔑 Đăng nhập Minimax Web <span style="font-size:0.75rem; color:var(--text-muted);">(Camoufox — Không cần API Key)</span></div>
+                        <div class="grid-2">
+                            <div>
+                                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">
+                                    Tự động mở trang web Minimax (minimax.io) để lấy Token nội bộ.<br>
+                                    Nhấn "Bắt đầu" → Camoufox mở → <b>chỉ cần đăng nhập</b>, phần mềm đọc token ngay
+                                    (không phải tạo audio nữa). Token này dùng cho cả TTS lẫn <b>tạo voice clone</b>.
+                                </p>
+                                <div class="btn-group">
+                                    <button class="btn btn-success" id="btnStartMinimaxScraper">▶ Bắt đầu lấy Token</button>
+                                    <button class="btn" id="btnOpenMinimaxBrowser">🌐 Mở trình duyệt MiniMax</button>
+                                    <button class="btn btn-danger" id="btnStopMinimaxScraper">⏹ Dừng</button>
+                                </div>
+                                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 8px;">
+                                    "Mở trình duyệt MiniMax" mở thẳng trang Voice Cloning bằng phiên đã lưu và
+                                    <b>giữ cửa sổ ở lại</b>. Mọi thao tác của bạn trên đó được ghi lại để app học
+                                    đúng cách gọi API. Bấm "Dừng" khi xong.
+                                </p>
+                            </div>
+                            <div class="glass-card">
+                                <div style="margin-bottom: 8px; font-weight: 600;">Trạng thái Token Minimax</div>
+                                <div id="minimaxScraperDetailStatus" style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    Chưa khởi động
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Proxy Settings -->
+                <div class="card">
+                    <div class="settings-section">
+                        <div class="settings-title">🌐 Cấu Hình Proxy</div>
+                        <div class="grid-2">
+                            <div>
+                                <div class="form-group">
+                                    <label class="label">Danh sách Proxy (mỗi dòng một proxy)</label>
+                                    <textarea class="textarea" id="proxyListInput" rows="6"
+                                        placeholder="http://host:port
+socks5://user:pass@host:port
+host:port"></textarea>
+                                </div>
+                                <div class="btn-group">
+                                    <button class="btn btn-primary" id="btnLoadProxies">Tải Proxy</button>
+                                    <button class="btn" id="btnTestProxies">🔍 Kiểm tra tất cả</button>
+                                    <button class="btn" id="btnClearProxies">🗑️ Xóa</button>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="glass-card" style="margin-bottom: 12px;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <span style="font-weight: 600;">Nhóm Proxy</span>
+                                        <span class="badge badge-info" id="proxyCountBadge">0 proxy</span>
+                                    </div>
+                                    <div id="proxyStatsDetail" style="font-size: 0.85rem; color: var(--text-secondary);">
+                                        Chưa tải proxy nào
+                                    </div>
+                                </div>
+                                <div class="table-container" style="max-height: 200px; overflow-y: auto;">
+                                    <table id="proxyTable">
+                                        <thead>
+                                            <tr><th>Proxy</th><th>Độ trễ</th><th>Trạng thái</th></tr>
+                                        </thead>
+                                        <tbody id="proxyTableBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Worker Settings -->
+                <div class="card">
+                    <div class="settings-section">
+                        <div class="settings-title">⚡ Cấu Hình Worker</div>
+                        <div class="grid-3">
+                            <div class="form-group">
+                                <label class="label">Số lượng Worker</label>
+                                <input type="number" class="input" id="workerCountInput" value="3" min="1" max="10">
+                            </div>
+                            <div class="form-group">
+                                <label class="label">Định dạng xuất mặc định</label>
+                                <select class="select" id="defaultOutputFormat">
+                                    <option value="mp3">MP3</option>
+                                    <option value="wav">WAV</option>
+                                    <option value="ogg">OGG</option>
+                                    <option value="flac">FLAC</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="label">&nbsp;</label>
+                                <button class="btn btn-primary" id="btnSaveWorkerSettings" style="width:100%;">Lưu cài đặt</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── TAB: Nhật Ký ── -->
+            <div class="tab-panel" id="tab-log">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📋 Nhật Ký Hoạt Động</div>
+                        <button class="btn btn-sm" id="btnClearLog">Xóa</button>
+                    </div>
+                    <div class="log-panel" id="logPanel">
+                        <div class="log-entry log-info">
+                            <span class="log-time">[--:--:--]</span>
+                            ElevenLabs Voice Pro đã khởi tạo. Sẵn sàng.
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Output Files -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">📁 File Đầu Ra</div>
+                        <button class="btn btn-sm" id="btnRefreshOutputFiles">🔄 Làm mới</button>
+                    </div>
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr><th>Tên file</th><th>Kích thước</th><th>Thao tác</th></tr>
+                            </thead>
+                            <tbody id="outputFilesBody">
+                                <tr>
+                                    <td colspan="3" style="text-align:center; padding: 20px; color: var(--text-muted);">
+                                        Chưa có file đầu ra
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- ═══ FOOTER ═══ -->
+        <footer class="app-footer">
+            <div class="footer-left">
+                <div class="footer-stat">
+                    <span class="status-dot blue" style="animation:none;width:5px;height:5px;"></span>
+                    <span id="footerWorkers">Worker: 0/3</span>
+                </div>
+                <div class="footer-stat" id="footerBatchStatus">Hàng loạt: Rảnh</div>
+            </div>
+            <div class="footer-right">
+                <span id="footerFFmpeg">FFmpeg: đang kiểm tra...</span>
+                <span>ElevenLabs Voice Pro v1.0</span>
+            </div>
+        </footer>
+
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+
+        <!-- Scripts -->
+    <script src="/js/app.js"></script>
+    <script src="/js/voice-search.js"></script>
+    <script src="/js/tts-panel.js"></script>
+    <script src="/js/batch-panel.js"></script>
+    <script src="/js/voice-clone-creator.js"></script>
+    <script src="/js/profile-panel.js"></script>
+    <script src="/js/settings-panel.js"></script>
+</body>
+</html>
+
+
+
